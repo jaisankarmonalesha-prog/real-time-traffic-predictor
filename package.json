@@ -10,7 +10,10 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "db:seed": "python server/db_utils.py --seed",
+    "db:export": "python server/db_utils.py --export-csv",
+    "db:clear": "python server/db_utils.py --clear"
   },
   "dependencies": {
     "lucide-react": "^1.21.0",

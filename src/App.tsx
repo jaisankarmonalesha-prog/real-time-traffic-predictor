@@ -55,10 +55,66 @@ const SEED_HISTORY = [
   { time: '11:08 AM', actual: 42, predicted: 45 },
 ];
 
+const API_BASE = "http://127.0.0.1:8000";
+
 function App() {
   const [junctions, setJunctions] = useState<Junction[]>(INITIAL_JUNCTIONS);
   const [roads, setRoads] = useState<RoadSegment[]>(INITIAL_ROADS);
   const [incidents, setIncidents] = useState<TrafficIncident[]>([]);
+
+  // Fetch initial incidents and history from backend on mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch incidents
+        const incResp = await fetch(`${API_BASE}/api/incidents`);
+        if (incResp.ok) {
+          const incData = await incResp.json();
+          setIncidents(incData);
+          if (incData.length > 0) {
+            setRoads(prev => prev.map(r => {
+              const matched = incData.find((inc: any) => inc.roadId === r.id);
+              if (matched) {
+                return { ...r, incidentActive: true, currentSpeed: 5, congestionLevel: 'gridlock' };
+              }
+              return r;
+            }));
+          }
+        }
+
+        // Fetch history
+        const histResp = await fetch(`${API_BASE}/api/history`);
+        if (histResp.ok) {
+          const historyData = await histResp.json();
+          if (historyData.length > 0) {
+            const mapped = historyData.map((d: any) => ({ time: d.timestamp, actual: d.actual, predicted: d.predicted }));
+            setCongestionHistory(mapped);
+          } else {
+            // Seed history in database
+            for (const item of SEED_HISTORY) {
+              await fetch(`${API_BASE}/api/logs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  timestamp: item.time,
+                  actual: item.actual,
+                  predicted: item.predicted
+                })
+              });
+            }
+            const refetched = await fetch(`${API_BASE}/api/history`);
+            if (refetched.ok) {
+              const refetchedData = await refetched.json();
+              setCongestionHistory(refetchedData.map((d: any) => ({ time: d.timestamp, actual: d.actual, predicted: d.predicted })));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Backend API offline. Running local client-only simulation.", err);
+      }
+    };
+    fetchInitialData();
+  }, []);
   const [alerts, setAlerts] = useState<AlertLog[]>([
     { id: 'a1', text: 'Telemetry streams operational. Tamil Nadu Highway Twin is active.', time: '11:00:00 AM', type: 'info' },
     { id: 'a2', text: 'High density bottleneck detected at Node CHN (Chennai Capital Hub).', time: '11:02:15 AM', type: 'warning' },
@@ -267,6 +323,21 @@ function App() {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
           finalIncidents.push(newIncident);
+          // Sync spawned incident to backend database
+          fetch(`${API_BASE}/api/incidents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: newIncident.id,
+              type: newIncident.type,
+              roadId: newIncident.roadId,
+              roadName: newIncident.roadName,
+              severity: newIncident.severity,
+              description: newIncident.description,
+              timestamp: newIncident.timestamp
+            })
+          }).catch(err => console.warn("Failed to sync incident to DB", err));
+
           // Update this road immediately in final list
           finalRoads = finalRoads.map((r) => {
             if (r.id === target.id) {
@@ -302,10 +373,31 @@ function App() {
       }
       predictedBaseline = Math.max(10, Math.min(95, predictedBaseline));
 
-      setCongestionHistory((prev) => {
-        const next = [...prev, { time: timeLabel, actual: congestionIndex, predicted: Math.round(predictedBaseline) }];
-        if (next.length > 10) next.shift();
-        return next;
+      // Post new congestion index log to DB
+      fetch(`${API_BASE}/api/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: timeLabel,
+          actual: congestionIndex,
+          predicted: Math.round(predictedBaseline)
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          fetch(`${API_BASE}/api/history`)
+            .then(r => r.json())
+            .then(data => {
+              setCongestionHistory(data.map((d: any) => ({ time: d.timestamp, actual: d.actual, predicted: d.predicted })));
+            });
+        }
+      })
+      .catch(() => {
+        setCongestionHistory((prev) => {
+          const next = [...prev, { time: timeLabel, actual: congestionIndex, predicted: Math.round(predictedBaseline) }];
+          if (next.length > 10) next.shift();
+          return next;
+        });
       });
 
     }, 4000);
@@ -314,30 +406,92 @@ function App() {
   }, []);
 
   // 3. Trigger manual ML prediction recalculation (displays neural network simulation)
-  const handleTriggerPrediction = () => {
+  const handleTriggerPrediction = async () => {
     setIsPredicting(true);
     
     // Log start
     const timestampStr = new Date().toLocaleTimeString();
     const startLog: AlertLog = {
       id: `l_${Date.now()}`,
-      text: 'Neural Predictor: Querying deep convolution weights for traffic flows...',
+      text: 'Neural Predictor: Querying server-side ML model weights...',
       time: timestampStr,
       type: 'info'
     };
     setAlerts((prev) => [startLog, ...prev]);
 
+    // Map string values to numbers for backend model format
+    const wMap = { sunny: 0, rain: 1, snow: 2 };
+    const tMap = { morning: 0, midday: 1, evening: 2, night: 3 };
+    const eMap = { none: 0, sports: 1, concert: 2, holiday: 3 };
+    
+    const activePoliciesCount = Object.values(simState.mitigations).filter(Boolean).length;
+    const weatherVal = wMap[simState.weather] ?? 0;
+    const timeVal = tMap[simState.timeOfDay] ?? 1;
+    const eventVal = eMap[simState.eventDensity] ?? 0;
+    const incidentsCount = incidents.length;
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weather: weatherVal,
+          time_of_day: timeVal,
+          event: eventVal,
+          active_policies: activePoliciesCount,
+          incidents: incidentsCount
+        })
+      });
+
+      if (resp.ok) {
+        const result = await resp.json();
+        const predCongestion = result.predicted_congestion;
+        const source = result.source;
+        
+        // Simulating the reduction delta for speed updates on UI
+        const delta = Math.max(0, globalCongestion - predCongestion);
+        if (delta > 0) {
+          setRoads((prev) =>
+            prev.map((r) => {
+              if (r.congestionLevel === 'gridlock' || r.congestionLevel === 'congested') {
+                const speedIncrease = Math.round(r.currentSpeed * (1 + (delta / 100)));
+                const newSpeed = Math.min(r.speedLimit, speedIncrease);
+                return {
+                  ...r,
+                  currentSpeed: newSpeed,
+                  congestionLevel: calculateCongestionLevel(newSpeed, r.speedLimit)
+                };
+              }
+              return r;
+            })
+          );
+          setGlobalCongestion(predCongestion);
+        }
+
+        setIsPredicting(false);
+        const endTimestamp = new Date().toLocaleTimeString();
+        const endLog: AlertLog = {
+          id: `l_${Date.now() + 1}`,
+          text: `Neural Predictor (${source}) Finished. Forecast Congestion: ${predCongestion}%.`,
+          time: endTimestamp,
+          type: 'policy'
+        };
+        setAlerts((prev) => [endLog, ...prev]);
+        return;
+      }
+    } catch (err) {
+      console.warn("FastAPI prediction failed, falling back to local simulation logic:", err);
+    }
+
+    // Local Fallback simulation logic (if backend offline)
     setTimeout(() => {
       setIsPredicting(false);
-      
-      // Calculate optimized indexes
       const activeMitigations = Object.values(simState.mitigations).filter(Boolean).length;
       let reduction = 0;
       if (activeMitigations === 1) reduction = 8;
       else if (activeMitigations === 2) reduction = 15;
       else if (activeMitigations === 3) reduction = 22;
 
-      // Adjust road speeds and congestion slightly to reflect calculations
       if (reduction > 0) {
         setRoads((prev) =>
           prev.map((r) => {
@@ -359,7 +513,7 @@ function App() {
       const endTimestamp = new Date().toLocaleTimeString();
       const endLog: AlertLog = {
         id: `l_${Date.now() + 1}`,
-        text: `Neural Predictor Finished. Global grid efficiency improved by ${activeMitigations * 7}%.`,
+        text: `Neural Predictor (Local Engine) Finished. Global grid efficiency improved by ${activeMitigations * 7}%.`,
         time: endTimestamp,
         type: 'policy'
       };
@@ -389,7 +543,10 @@ function App() {
       })
     );
 
-    // Clear incident
+    // Clear incident locally and on backend database
+    fetch(`${API_BASE}/api/incidents/${incidentId}`, { method: 'DELETE' })
+      .catch(err => console.warn("Failed to delete incident on server", err));
+
     setIncidents((prev) => prev.filter((inc) => inc.id !== incidentId));
 
     // Log resolution
@@ -450,6 +607,21 @@ function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setIncidents((prev) => [...prev, newInc]);
+    // Sync shortcut incident to backend database
+    fetch(`${API_BASE}/api/incidents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newInc.id,
+        type: newInc.type,
+        roadId: newInc.roadId,
+        roadName: newInc.roadName,
+        severity: newInc.severity,
+        description: newInc.description,
+        timestamp: newInc.timestamp
+      })
+    }).catch(err => console.warn("Failed to sync shortcut incident", err));
+
     setRoads((prev) =>
       prev.map((r) => {
         if (r.id === target.id) return { ...r, incidentActive: true, currentSpeed: 4, congestionLevel: 'gridlock' };
