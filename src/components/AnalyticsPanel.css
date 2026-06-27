@@ -1,0 +1,160 @@
+.analytics-sidebar {
+  width: var(--sidebar-width);
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(10, 12, 22, 0.85);
+  border-left: 1px solid var(--border-color);
+  backdrop-filter: blur(15px);
+}
+
+.analytics-section h3 {
+  font-family: var(--font-logo);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.title-icon {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.chart-container {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Tooltip design */
+.chart-tooltip {
+  background: rgba(8, 10, 18, 0.95);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.tooltip-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.tooltip-value {
+  font-size: 13px;
+  font-weight: bold;
+  margin: 2px 0;
+}
+
+/* Distribution lists */
+.distribution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.dist-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dist-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.dist-name {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.dist-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dist-value {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.dist-pct {
+  font-weight: bold;
+}
+
+/* System Health Section Metrics */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metric-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.metric-box:hover {
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.metric-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.05);
+}
+
+.metric-sub {
+  font-size: 9px;
+}
+
+.text-clear {
+  color: var(--traffic-clear);
+}
+
+.text-gridlock {
+  color: var(--traffic-gridlock);
+}

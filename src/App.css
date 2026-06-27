@@ -1,0 +1,145 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-main);
+  overflow: hidden;
+}
+
+/* Header Styles */
+.app-header {
+  height: var(--header-height);
+  min-height: var(--header-height);
+  background: rgba(8, 10, 18, 0.95);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+  opacity: 0.7;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+  color: #000;
+}
+
+.logo-text h1 {
+  font-family: var(--font-logo);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 0;
+  background: linear-gradient(90deg, #fff 0%, #cbd5e1 50%, var(--cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+}
+
+.logo-text span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  display: block;
+}
+
+/* System Stats in Header */
+.header-system-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.header-stat .stat-label {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.header-stat .stat-value {
+  font-size: 15px;
+  font-weight: bold;
+  font-family: var(--font-mono);
+}
+
+.header-stat .stat-value.online {
+  color: var(--traffic-clear);
+  text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+}
+
+.header-stat .stat-value.simulating {
+  color: var(--purple);
+  text-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+}
+
+/* Main Dashboard Layout */
+.app-content {
+  flex: 1;
+  display: flex;
+  height: calc(100vh - var(--header-height));
+  width: 100vw;
+  overflow: hidden;
+}
+
+.center-map-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 16px;
+  gap: 16px;
+}
+
+.incident-trigger-shortcut-btn {
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--traffic-gridlock);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.incident-trigger-shortcut-btn:hover {
+  background: var(--traffic-gridlock);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
